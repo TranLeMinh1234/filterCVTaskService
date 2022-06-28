@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "mIlzLIBvjCVqJTYRRr5KaDIghub8mvGfdkq2IGOj+pKEQp30ZpAfmFZjyC5AyAD1fVQg/Eyev5TvnPbyCAD3uQ==",
+  "success": true,
+  "projectFilePath": "E:\\New folder (2)\\all_project\\C#\\filterCVTaskService\\filterCVTaskService\\filterCVTaskService\\filterCVTaskService.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Admin\\.nuget\\packages\\newtonsoft.json\\13.0.1\\newtonsoft.json.13.0.1.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\restsharp\\108.0.1\\restsharp.108.0.1.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\system.text.json\\5.0.0\\system.text.json.5.0.0.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\3.1.25\\microsoft.netcore.app.host.win-x64.3.1.25.nupkg.sha512"
+  ],
+  "logs": []
+}
