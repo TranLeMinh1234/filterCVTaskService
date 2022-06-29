@@ -15,6 +15,8 @@ namespace filterCVTaskService
 {
     public class Startup
     {
+
+        private string MyAllowSpecificOrigins = "http://localhost:8080/";
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -26,6 +28,17 @@ namespace filterCVTaskService
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+
+            services.AddCors(options =>
+            {
+                options.AddPolicy(name: MyAllowSpecificOrigins,
+                                  builder =>
+                                  {
+                                      builder.AllowAnyOrigin()
+                                             .AllowAnyHeader()
+                                             .AllowAnyMethod();
+                                  });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -39,6 +52,8 @@ namespace filterCVTaskService
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            app.UseCors(MyAllowSpecificOrigins);
 
             app.UseAuthorization();
 

@@ -17,7 +17,9 @@ namespace filterCVTaskService.Controllers
 {
     public class Process
     {
-        private string url = "https://my-cv-service.herokuapp.com/";
+        private string url = "https://my-gatewayy.herokuapp.com/";
+
+        public string urlUpdateProcess { get; set; }
         public string id { get; set; }
         public List<IFormFileCustom> files { get; set; }
         public string keyWord { get; set; }
@@ -29,14 +31,20 @@ namespace filterCVTaskService.Controllers
         public List<CV> listCV = new List<CV>();
         public string[] listKeyWord;
 
+        private Dictionary<string, List<dynamic>> resultFilter = new Dictionary<string, List<dynamic>>();
+        private List<dynamic> suitableList = new List<dynamic>();
+        private List<dynamic> unsuitableList = new List<dynamic>();
+
         public Process(string id, List<IFormFileCustom> files, int file_count,
-             string keyWord, bool enable_notification)
+             string keyWord, bool enable_notification, string urlUpdateProcess)
         {
             this.id = id;
             this.files = files;
             this.file_count = file_count;
             this.keyWord = keyWord;
             this.enable_notification = enable_notification;
+            this.urlUpdateProcess = urlUpdateProcess;
+
             this.thread = new Thread(async () =>
             {
                 try
@@ -58,9 +66,14 @@ namespace filterCVTaskService.Controllers
         public async Task ExecuteAsync()
         {
             var httpClient = new HttpClient();
+            int step = 0;
+            string textUpdateProcess = "";
 
             //step 1 - khởi tạo danh sách cv
             //initCVFromInput();
+            step++;
+            textUpdateProcess = this.id + "|" + step + "|" + "Khởi tạo danh sách CV";
+            await this.UpdateProcess(httpClient, textUpdateProcess);
 
             foreach (IFormFileCustom iFormFileCustom in this.files)
             {
@@ -72,26 +85,66 @@ namespace filterCVTaskService.Controllers
                 cv.numberOfMatched = 0;
                 cv.byteArray = iFormFileCustom.byteArray;
                 cv.listMatched = new string[0];
+                cv.matchPercent = 0;
 
                 listCV.Add(cv);
             }
 
+            step++;
+            textUpdateProcess = this.id + "|" + step + "|" + "Khởi tạo danh sách KeyWord";
+            await this.UpdateProcess(httpClient, textUpdateProcess);
             //step 2 - khởi tạo danh sách tiêu chí
             //initCriteria();
             listKeyWord = keyWord.Split(",");
 
+            step++;
+            textUpdateProcess = this.id + "|" + step + "|" + "Lấy text, thông tin CV";
+            await this.UpdateProcess(httpClient, textUpdateProcess);
             //step 3 - lấy thông tin cv
             await this.GetTextInfoCV(httpClient);
 
+            step++;
+            textUpdateProcess = this.id + "|" + step + "|" + "Tìm kiếm số lượng từ khóa xuất hiện trên CV";
+            await this.UpdateProcess(httpClient, textUpdateProcess);
             //step 4 - tìm số từ 
             await this.FindMatchedInfo(httpClient);
 
-            //step 5,6,7
-            //filter();
-            //step 8
-            //sortCVByNumberOfMatchedCriteria();
+            step++;
+            textUpdateProcess = this.id + "|" + step + "|" + "Lọc CV";
+            await this.UpdateProcess(httpClient, textUpdateProcess);
+            //step 5,6,7 - lọc CV
+            await this.Filter(httpClient);
+
+            //step thêm nếu có thiết lập gửi email
+            if (enable_notification)
+            {
+                step++;
+                textUpdateProcess = this.id + "|" + step + "|" + "Gửi email thông báo từ chối CV";
+                await this.UpdateProcess(httpClient, textUpdateProcess);
+                this.SendEmail(httpClient);
+            }
+
+            step++;
+            textUpdateProcess = this.id + "|" + step + "|" + "Sắp xếp CV theo mức độ phù hợp giảm dần";
+            await this.UpdateProcess(httpClient, textUpdateProcess);
+            //step 8 - sort lại
+            this.SortCVByNumberOfMatchedCriteria();
+
             //final
-            //returnResutlt();
+            resultFilter.Add("suitableList",suitableList);
+            resultFilter.Add("unsuitableList", unsuitableList);
+
+            string jsonData = JsonConvert.SerializeObject(resultFilter);
+
+            step++;
+            textUpdateProcess = this.id + "|" + "final" + "|" + "Hoàn thành dịch vụ"+"|"+jsonData;
+            await this.UpdateProcess(httpClient, textUpdateProcess);
+
+        }
+
+        private void SortCVByNumberOfMatchedCriteria()
+        {
+            suitableList.Sort((x, y) => x.numberOfMatched > y.numberOfMatched);
         }
 
         private async Task GetTextInfoCV(HttpClient httpClient)
@@ -137,7 +190,7 @@ namespace filterCVTaskService.Controllers
                 var postData = new StringContent(jsonData, Encoding.UTF8, "application/json");
                 using (
                      var message =
-                         await httpClient.PostAsync("https://my-keyword-finder.herokuapp.com/keyword/finder", postData))
+                         await httpClient.PostAsync(url+"keyword/finder", postData))
                 {
                     var jsonString = await message.Content.ReadAsStringAsync();
                     var jsonObject = JsonConvert.DeserializeObject<KeyWordApiResult>(jsonString);
@@ -145,6 +198,70 @@ namespace filterCVTaskService.Controllers
                     cv.listMatched = jsonObject.listKeyword;
                 }
             }
+        }
+
+        private async Task SendEmail(HttpClient httpClient)
+        {
+            foreach (CV cv in listCV)
+            {
+                if (cv.numberOfMatched == 0)
+                {
+                    var objectData = new
+                    {
+                        email = cv.email,
+                        subject = "Thông báo xét duyệt CV",
+                        content = "Cảm ơn bạn đã gửi CV! Hiện tại bạn chưa phù hợp với tiêu chí của công ty chúng tôi. Hẹn bạn quay lại trong lần tuyển dụng sắp tới!"
+                    };
+                    string jsonData = JsonConvert.SerializeObject(objectData);
+                    var postData = new StringContent(jsonData, Encoding.UTF8, "application/json");
+                    using (
+                         var message =
+                             await httpClient.PostAsync(url + "email/sender", postData))
+                    {
+                        var jsonString = await message.Content.ReadAsStringAsync();
+                        var jsonObject = JsonConvert.DeserializeObject<KeyWordApiResult>(jsonString);
+                    }
+                }
+            }
+        }
+
+        private async Task Filter(HttpClient httpClient)
+        { 
+            foreach(CV cv in listCV)
+            {
+                cv.matchPercent = (float)100 * ((float)cv.numberOfMatched / listKeyWord.Length);
+                if (cv.numberOfMatched > 0)
+                {
+                    suitableList.Add(new
+                    {
+                        name = cv.file.FileName,
+                        numberOfMatched = cv.numberOfMatched,
+                        matchPercent = cv.matchPercent,
+                        listMatched = cv.listMatched
+                    });
+                }
+                else
+                    unsuitableList.Add(new {
+                        name = cv.file.FileName,
+                        numberOfMatched = cv.numberOfMatched,
+                        matchPercent = cv.matchPercent,
+                        listMatched = cv.listMatched
+                    });
+            }
+        }
+
+        private async Task UpdateProcess(HttpClient httpClient, string textInfo)
+        {
+            var objectData = new
+            {
+                textInfo = textInfo,
+            };
+            string jsonData = JsonConvert.SerializeObject(objectData);
+            var postData = new StringContent(jsonData, Encoding.UTF8, "application/json");
+            using (
+                 var message =
+                     await httpClient.PostAsync(urlUpdateProcess, postData))
+            {}
         }
 
         public class KeyWordApiResult {
@@ -160,7 +277,7 @@ namespace filterCVTaskService.Controllers
             public string email { get; set; }
             public string text { get; set; }
             public int numberOfMatched { get; set; }
-
+            public float matchPercent { get; set; }
             public string[] listMatched { get; set; }
             public IFormFile file { get; set; }
             public byte[] byteArray { get; set; }

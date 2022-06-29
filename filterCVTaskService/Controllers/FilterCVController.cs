@@ -17,7 +17,7 @@ namespace filterCVTaskService.Controllers
 
         [HttpPost]
         public IActionResult Start([FromForm] List<IFormFile> files, [FromForm] int file_count,
-            [FromForm] string keyWord, [FromForm] bool enable_notification)
+            [FromForm] string keyWord, [FromForm] bool enable_notification, [FromForm] string urlUpdateProcess)
         {
             List<IFormFileCustom> listIFormFileCustoms = new List<IFormFileCustom>();
             // tiền xử lý stream cho file
@@ -35,7 +35,7 @@ namespace filterCVTaskService.Controllers
 
             //Khởi tạo proccess-id định danh
             string newProcessId = Guid.NewGuid().ToString();
-            Process newProcess = new Process(newProcessId, listIFormFileCustoms, file_count, keyWord, enable_notification);
+            Process newProcess = new Process(newProcessId, listIFormFileCustoms, file_count, keyWord, enable_notification, urlUpdateProcess);
 
             _manager.Add(newProcessId, newProcess);
 
