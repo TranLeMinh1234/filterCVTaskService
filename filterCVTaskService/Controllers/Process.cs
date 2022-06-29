@@ -90,6 +90,8 @@ namespace filterCVTaskService.Controllers
                 listCV.Add(cv);
             }
 
+            Thread.Sleep(1000);
+
             step++;
             textUpdateProcess = this.id + "|" + step + "|" + "Khởi tạo danh sách KeyWord";
             await this.UpdateProcess(httpClient, textUpdateProcess);
@@ -97,11 +99,15 @@ namespace filterCVTaskService.Controllers
             //initCriteria();
             listKeyWord = keyWord.Split(",");
 
+            Thread.Sleep(1000);
+
             step++;
             textUpdateProcess = this.id + "|" + step + "|" + "Lấy text, thông tin CV";
             await this.UpdateProcess(httpClient, textUpdateProcess);
             //step 3 - lấy thông tin cv
             await this.GetTextInfoCV(httpClient);
+
+            Thread.Sleep(1000);
 
             step++;
             textUpdateProcess = this.id + "|" + step + "|" + "Tìm kiếm số lượng từ khóa xuất hiện trên CV";
@@ -109,11 +115,15 @@ namespace filterCVTaskService.Controllers
             //step 4 - tìm số từ 
             await this.FindMatchedInfo(httpClient);
 
+            Thread.Sleep(1000);
+
             step++;
             textUpdateProcess = this.id + "|" + step + "|" + "Lọc CV";
             await this.UpdateProcess(httpClient, textUpdateProcess);
             //step 5,6,7 - lọc CV
             await this.Filter(httpClient);
+
+            Thread.Sleep(1000);
 
             //step thêm nếu có thiết lập gửi email
             if (enable_notification)
@@ -123,6 +133,8 @@ namespace filterCVTaskService.Controllers
                 await this.UpdateProcess(httpClient, textUpdateProcess);
                 this.SendEmail(httpClient);
             }
+
+            Thread.Sleep(1000);
 
             step++;
             textUpdateProcess = this.id + "|" + step + "|" + "Sắp xếp CV theo mức độ phù hợp giảm dần";
